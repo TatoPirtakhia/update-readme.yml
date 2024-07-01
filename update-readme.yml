@@ -1,28 +1,38 @@
-name: Update README
+name: Update README with GitHub Stats
 
 on:
-  schedule:
-    - cron: '0 * * * *'  # Runs every hour
   push:
     branches:
       - main
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Update README
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Update README with GitHub Stats
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          curl -H "Authorization: token $GH_TOKEN" https://api.github.com/user/repos?per_page=100 > repos.json
-          curl -H "Authorization: token $GH_TOKEN" https://api.github.com/user > user.json
-          node update-readme.js
-      - name: Commit and push if changed
+          # Fetch GitHub Stats
+          GITHUB_STATS=$(curl -H "Authorization: token $GH_TOKEN" "https://github-readme-stats.vercel.app/api?username=tatopirtakhia&show_icons=true&locale=en&count_private=true&include_all_commits=true&theme=radical")
+          TOP_LANGS=$(curl -H "Authorization: token $GH_TOKEN" "https://github-readme-stats.vercel.app/api/top-langs?username=tatopirtakhia&show_icons=true&locale=en&layout=compact&count_private=true&include_all_commits=true&theme=radical")
+          STREAK_STATS=$(curl -H "Authorization: token $GH_TOKEN" "https://github-readme-streak-stats.herokuapp.com/?user=tatopirtakhia&include_all_commits=true&theme=radical")
+
+          # Update README.md
+          sed -i "s|<!-- GITHUB_STATS -->|![GitHub Stats](${GITHUB_STATS})|" README.md
+          sed -i "s|<!-- TOP_LANGS -->|![Top Languages](${TOP_LANGS})|" README.md
+          sed -i "s|<!-- STREAK_STATS -->|![GitHub Streak Stats](${STREAK_STATS})|" README.md
+
+      - name: Commit and Push changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add README.md
-          git commit -m 'Update README' || exit 0
+          git commit -m 'Update README with latest stats'
           git push
